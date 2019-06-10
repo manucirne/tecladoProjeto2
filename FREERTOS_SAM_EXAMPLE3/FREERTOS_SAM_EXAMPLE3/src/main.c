@@ -126,6 +126,21 @@ extern void xPortSysTickHandler(void);
 #define LED_PINW		   11
 #define LED_PIN_MASKW   (1<<LED_PINW)
 
+#define LED_PIO_IDLA	   ID_PIOD
+#define LED_PIOLA        PIOD
+#define LED_PINLA		   28
+#define LED_PIN_MASKLA   (1<<LED_PINLA)
+
+#define LED_PIO_IDSI	   ID_PIOD
+#define LED_PIOSI        PIOD
+#define LED_PINSI		   27
+#define LED_PIN_MASKSI   (1<<LED_PINSI)
+
+#define LED_PIO_IDDO2	   ID_PIOD
+#define LED_PIODO2        PIOD
+#define LED_PINDO2		   18
+#define LED_PIN_MASKDO2   (1<<LED_PINDO2)
+
 typedef struct nota t_nota;
 typedef struct notadastruct stru_nota;
 struct nota{
@@ -140,48 +155,65 @@ struct notadastruct{
 };
 
 //MUSICA TESTE
-int DO = 1;
-int RE = 2;
-int MI = 3;
-int FA = 4;
-int SOL = 5;
-int PAUSA = 0;
-int UM = 2;
-int MEIO = 1;
-int N = 29;
 
-stru_nota task_DO = {.n = 1, .led = LED_PIOB, .mask = LED_PIN_MASKB};
-int task_RE[] = {2, LED_PIOY, LED_PIN_MASKY};
-int task_MI[] = {3, LED_PIOR, LED_PIN_MASKR};
-int task_FA[] = {4, LED_PIOG, LED_PIN_MASKG};
-int task_SOL[] = {5, LED_PIOW, LED_PIN_MASKW};
+int N = 32;
 
-const t_nota P1 = {.note = 0,
-	 .tempo = 1,};
-const t_nota C1 = {.note = 1, 
-	.tempo = 1};
-const t_nota D1 = {.note = 2, 
-	.tempo = 1};
-const t_nota E1 ={.note = 3, 
-	.tempo = 1};
-const t_nota F2 ={.note = 4, 
-	.tempo = 2};
-const t_nota F1 ={.note = 4, 
-	.tempo = 1};
-const t_nota D2 ={.note = 2, 
-	.tempo = 2};
-const t_nota G1 ={.note = 5, 
-	.tempo = 1};
-const t_nota E2 ={.note = 3, 
-	.tempo = 2};
-const t_nota fim ={.note = 1000,
-.tempo = 2};
+stru_nota task_DO = {.n = 1, 
+	.led = LED_PIOB, 
+	.mask = LED_PIN_MASKB};
+stru_nota task_RE = {.n = 2,
+	.led = LED_PIOY,
+	.mask = LED_PIN_MASKY};
+stru_nota task_MI = {.n = 3,
+	.led = LED_PIOR,
+	.mask = LED_PIN_MASKR};
+stru_nota task_FA = {.n = 4,
+	.led = LED_PIOG,
+	.mask = LED_PIN_MASKG};
+stru_nota task_SOL = {.n = 5,
+	.led = LED_PIOW,
+	.mask = LED_PIN_MASKW};
+stru_nota task_LA = {.n = 6,
+	.led = LED_PIOLA,
+	.mask = LED_PIN_MASKLA};
+stru_nota task_SI = {.n = 7,
+	.led = LED_PIOSI,
+	.mask = LED_PIN_MASKSI};
+stru_nota task_DO2 = {.n = 8,
+	.led = LED_PIODO2,
+	.mask = LED_PIN_MASKDO2};
+//do maior
+const t_nota DO1 = {.note = 1,
+.tempo = 1,};
+const t_nota RE1 = {.note = 2,
+.tempo = 1,};
+const t_nota MI1 = {.note = 3,
+.tempo = 1,};
+const t_nota FA1 = {.note = 4,
+.tempo = 1,};
+const t_nota SOL1 = {.note = 5,
+.tempo = 1,};
+const t_nota LA1 = {.note = 6,
+.tempo = 1,};
+const t_nota SI1 = {.note = 7,
+.tempo = 1,};
+const t_nota DO2_1 = {.note = 8,
+.tempo = 1,};
 
-t_nota *DOREMIFA[] = {&P1,&C1,&D1,&E1,&F2,&F1,&F1,&P1,&C1,&D1,&C1,&D2,&D1,&D1,&P1,&C1,&G1,&F1,&E2,&E1,&E1,&P1,&C1,&D1,&E1,&F2,&F1,&F1,&fim};
+t_nota *DOREMIFA[] = {&DO1,&RE1, &MI1,&FA1,&SOL1,&LA1,&SI1,&DO2_1,&DO2_1,&SI1,&LA1,&SOL1,&FA1,&MI1,&RE1,&DO1,&DO1,&RE1, &MI1,&FA1,&SOL1,&LA1,&SI1,&DO2_1,&DO2_1,&SI1,&LA1,&SOL1,&FA1,&MI1,&RE1,&DO1};
 static int beat = 1000;
+static int teste[][24] = {{1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},{0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}};
 
 QueueHandle_t xQueueMus;
-SemaphoreHandle_t xSemaphoreNotes;
 
 /**
  * \brief Called if stack overflow during execution
@@ -244,12 +276,18 @@ void LED_init(int estado){
 	pmc_enable_periph_clk(LED_PIO_IDR);
 	pmc_enable_periph_clk(LED_PIO_IDG);
 	pmc_enable_periph_clk(LED_PIO_IDW);
+	pmc_enable_periph_clk(LED_PIO_IDDO2);
+	pmc_enable_periph_clk(LED_PIO_IDLA);
+	pmc_enable_periph_clk(LED_PIO_IDSI);
 	
 	pio_set_output(LED_PIOB, LED_PIN_MASKB, estado, 0, 0 );
 	pio_set_output(LED_PIOY, LED_PIN_MASKY, estado, 0, 0 );
 	pio_set_output(LED_PIOR, LED_PIN_MASKR, estado, 0, 0 );
 	pio_set_output(LED_PIOG, LED_PIN_MASKG, estado, 0, 0 );
 	pio_set_output(LED_PIOW, LED_PIN_MASKW, estado, 0, 0 );
+	pio_set_output(LED_PIOLA, LED_PIN_MASKLA, estado, 0, 0 );
+	pio_set_output(LED_PIOSI, LED_PIN_MASKSI, estado, 0, 0 );
+	pio_set_output(LED_PIODO2, LED_PIN_MASKDO2, estado, 0, 0 );
 };
 
 static void task_maestro()
@@ -257,17 +295,20 @@ static void task_maestro()
 	int delay = 0;
 	for (;;) {
 		for(int i = 0; i < N; i++){
-			printf("iiiiiiiiii: %d    \n", i);
-			t_nota *atual = DOREMIFA[i];
-			//delay += atual->tempo;
-			if(xQueueMus != 0 && atual->note != 1000){
+			int *atual = &teste[i];
+			if(xQueueMus != 0){
 				xQueueSend(xQueueMus,atual,( TickType_t ) 0 ) ;
-				if (i == N-1){
-					xQueueReset( xQueueMus );
-				}
 			}
-			vTaskDelay(100);
+			vTaskDelay(300);
 		}
+	}
+}
+void TOCA_NOTA(int estado, int p_pio, const uint32_t ul_mask ){
+	if(estado){
+		pio_set(p_pio,ul_mask);
+	}	
+	else{
+		pio_clear(p_pio,ul_mask);
 	}
 }
 
@@ -275,125 +316,29 @@ static void task_maestro()
 static void task_led(void *pvParameters)
 {
 	
-	//stru_nota *id ;
-	
-    //id = ( (stru_nota* ) pvParameters); // problemas para pegar parâmetro que é um struct
-	
-	xQueueMus = xQueueCreate( N+10, sizeof( t_nota ) );
-	t_nota atual;// = {.note = 0, .tempo = 1};
-	//printf("nota %d\n",id[0]);
+	vTaskDelay(100);
+	int atuais[24];
 	LED_init(0);
 	for (;;) {
 		if( xQueueMus != 0 )
 		{
-			if( xQueuePeek( xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
+			if( xQueueReceive(xQueueMus, ( &atuais ), sizeof( int )*24 ) )
 			{
-				printf("TEMPO ATUAL %d\n",atual.tempo);
-	//		// pcRxedMessage now points to the struct AMessage variable posted
-	//		// by vATask, but the item still remains on the queue.
-				pio_clear(LED_PIOB,LED_PIN_MASKB);
-				pio_clear(LED_PIOY,LED_PIN_MASKY);
-				pio_clear(LED_PIOR,LED_PIN_MASKR);
-				pio_clear(LED_PIOG,LED_PIN_MASKG);
-				pio_clear(LED_PIOW,LED_PIN_MASKW);
-				vTaskDelay(100);
-				if(atual.note == 1){
-					printf("ENTROU DO %d\n",atual.note);
-					//printf("TESTE nota DO %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-	//					// pcRxedMessage now points to the struct AMessage variable posted
-	//					// by vATask.
-						pio_set(LED_PIOB,LED_PIN_MASKB);
-					}
-				}
-				else if(atual.note == 2){
-					printf("ENTROU RE %d\n",atual.note);
-					//printf("TESTE nota RE %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-						pio_set(LED_PIOY,LED_PIN_MASKY);
-					}
-				}
-				else if(atual.note == 3){
-					printf("ENTROU MI %d\n",atual.note);
-					//printf("TESTE nota RE %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-						pio_set(LED_PIOR,LED_PIN_MASKR);
-					}
-				}
-				else if(atual.note == 4){
-					printf("ENTROU FA %d\n",atual.note);
-					//printf("TESTE nota RE %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-						pio_set(LED_PIOG,LED_PIN_MASKG);
-					}
-				}
-				else if(atual.note == 5){
-					printf("ENTROU SOL %d\n",atual.note);
-					//printf("TESTE nota RE %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-						pio_set(LED_PIOW,LED_PIN_MASKW);
-					}
-				}
-				else if(atual.note == 0){
-					printf("ENTROU pausa %d\n",atual.note);
-					//printf("TESTE nota RE %d\n",id[0]);
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-					}
-				}
+				TOCA_NOTA(atuais[0], LED_PIOB,LED_PIN_MASKB);
+				TOCA_NOTA(atuais[1], LED_PIOY,LED_PIN_MASKY);
+				TOCA_NOTA(atuais[2], LED_PIOR,LED_PIN_MASKR);
+				TOCA_NOTA(atuais[3], LED_PIOG,LED_PIN_MASKG);
+				TOCA_NOTA(atuais[4], LED_PIOW,LED_PIN_MASKW);
+				TOCA_NOTA(atuais[5], LED_PIOLA,LED_PIN_MASKLA);
+				TOCA_NOTA(atuais[6], LED_PIOSI,LED_PIN_MASKSI);
+				TOCA_NOTA(atuais[7], LED_PIODO2,LED_PIN_MASKDO2);
+				
 			}
+	
 		}
-	//vTaskDelay(1000);
-	printf("TEMPO ATUAL %d\n",atual.tempo);
-	vTaskDelay(atual.tempo*600);
+	vTaskDelay(300);
 	}
 }
-
-static void task_pausa(void *pvParameters)
-{
-	xQueueMus = xQueueCreate( 20, sizeof( int ) );
-	t_nota atual;
-	//LED_init(0);
-	printf("Entrou pausa %d\n",0);
-	for (;;) {
-		if( xQueueMus != 0 )
-		{
-			if( xQueuePeek( xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-			{
-				printf("NOTA ATUAL %d\n",atual.note);
-				//		// pcRxedMessage now points to the struct AMessage variable posted
-				//		// by vATask, but the item still remains on the queue.
-				if(atual.note == 0){
-					if( xQueueReceive(xQueueMus, ( &atual ), sizeof( t_nota )*10 ) )
-					{
-						//					// pcRxedMessage now points to the struct AMessage variable posted
-						//					// by vATask.
-					}
-				}
-			}
-			//
-			//		vTaskDelay(atual.tempo*beat);
-		}
-		vTaskDelay(1000);
-	}
-}
-
-
 
 /**
  * \brief Configure the console UART.
@@ -436,16 +381,18 @@ int main(void)
 	/* Initialize the SAM system */
 	sysclk_init();
 	board_init();
+	xQueueMus = xQueueCreate( 50, sizeof( int )*24 );
 
 	/* Initialize the console uart */
 	configure_console();
 
 
 	/* Create task to make led blink */
-	if (xTaskCreate(task_led, "LedB", TASK_LED_STACK_SIZE, NULL,
+	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
 			TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create test ledB task\r\n");
+		printf("Failed to create test TASK TOCA task\r\n");
 	}
+	
 	
 	
 	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
