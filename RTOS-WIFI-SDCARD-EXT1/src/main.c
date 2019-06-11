@@ -52,7 +52,7 @@ extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 
-#define CHAR_SIZE 14
+#define CHAR_SIZE 100
 #define LINE_SIZE 21
 #define MAX_NOTES 100
 int music_matrix[MAX_NOTES][LINE_SIZE];
@@ -349,7 +349,6 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 						result++;
 					}
 					sprintf(music_name,"0:%s",music_server);
-					printf("Music name before: %s\r\n",music_name);
 					
 					xQueueSend( sdQueue, &music_name, NULL);
 				}
@@ -520,7 +519,7 @@ uint read_sdcard(char music_name[]){
 	FIL file_object;
   
     printf("Please plug an SD, MMC or SDIO card in slot.\n\r");
-
+	
     /* Wait card present and ready */
     do {
       status = sd_mmc_test_unit_ready(0);
@@ -626,7 +625,7 @@ int main(void)
 		printf("Failed to create Wifi task\r\n");
 	}
 	
-	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
+	/*if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create test TASK TOCA task\r\n");
 	}	
@@ -634,7 +633,7 @@ int main(void)
 	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create test MAESTRO task\r\n");
-	}
+	}*/
 
 
 	vTaskStartScheduler();
