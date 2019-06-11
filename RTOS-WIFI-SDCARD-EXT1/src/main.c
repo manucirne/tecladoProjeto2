@@ -4,6 +4,8 @@
 #include "bsp/include/nm_bsp.h"
 #include "driver/include/m2m_wifi.h"
 #include "socket/include/socket.h"
+#include <stdio.h>
+#include "conf_board.h"
 
 #define STRING_EOL    "\r\n"
 #define STRING_HEADER "-- WINC1500 weather client example --"STRING_EOL	\
@@ -56,6 +58,15 @@ extern void xPortSysTickHandler(void);
 int music_matrix[MAX_NOTES][LINE_SIZE];
 QueueHandle_t sdQueue;
 SemaphoreHandle_t xSemaphoreMusic;
+QueueHandle_t xQueueMus;
+int N = 0;
+
+#define TASK_MONITOR_STACK_SIZE            (2048/sizeof(portSTACK_TYPE))
+#define TASK_MONITOR_STACK_PRIORITY        (tskIDLE_PRIORITY)
+#define TASK_LED_STACK_SIZE                (1024/sizeof(portSTACK_TYPE))
+#define TASK_LED_STACK_PRIORITY            (3)
+
+#include "leds.h"
 
 /**
  * \brief Called if stack overflow during execution
@@ -116,6 +127,80 @@ static void configure_console(void)
 	stdio_serial_init(CONF_UART, &uart_serial_options);
 }
 
+
+void LED_init(int estado){
+	pmc_enable_periph_clk(LED_PIO_IDB);
+	pmc_enable_periph_clk(LED_PIO_IDY);
+	pmc_enable_periph_clk(LED_PIO_IDR);
+	pmc_enable_periph_clk(LED_PIO_IDG);
+	pmc_enable_periph_clk(LED_PIO_IDW);
+	pmc_enable_periph_clk(LED_PIO_IDDO2);
+	pmc_enable_periph_clk(LED_PIO_IDLA);
+	pmc_enable_periph_clk(LED_PIO_IDSI);
+	
+	pio_set_output(LED_PIOB, LED_PIN_MASKB, estado, 0, 0 );
+	pio_set_output(LED_PIOY, LED_PIN_MASKY, estado, 0, 0 );
+	pio_set_output(LED_PIOR, LED_PIN_MASKR, estado, 0, 0 );
+	pio_set_output(LED_PIOG, LED_PIN_MASKG, estado, 0, 0 );
+	pio_set_output(LED_PIOW, LED_PIN_MASKW, estado, 0, 0 );
+	pio_set_output(LED_PIOLA, LED_PIN_MASKLA, estado, 0, 0 );
+	pio_set_output(LED_PIOSI, LED_PIN_MASKSI, estado, 0, 0 );
+	pio_set_output(LED_PIODO2, LED_PIN_MASKDO2, estado, 0, 0 );
+};
+
+static void task_maestro()
+{
+	int delay = 0;
+	for (;;) {
+		if( xSemaphoreTake(xSemaphoreMusic, ( TickType_t ) 500) == pdTRUE ){
+			for(int i = 0; i < N; i++){
+				int *atual = &music_matrix[i];
+				if(xQueueMus != 0){
+					xQueueSend(xQueueMus,atual,( TickType_t ) 0 ) ;
+				}
+				vTaskDelay(300);
+			}
+			N = 0;
+		}
+	}
+}
+
+void TOCA_NOTA(int estado, int p_pio, const uint32_t ul_mask ){
+	if(estado){
+		pio_set(p_pio,ul_mask);
+	}
+	else{
+		pio_clear(p_pio,ul_mask);
+	}
+}
+
+
+static void task_led(void *pvParameters)
+{
+	
+	vTaskDelay(100);
+	int atuais[24];
+	LED_init(0);
+	for (;;) {
+		if( xQueueMus != 0 )
+		{
+			if( xQueueReceive(xQueueMus, ( &atuais ), sizeof( int )*24 ) )
+			{
+				TOCA_NOTA(atuais[0], LED_PIOB,LED_PIN_MASKB);
+				TOCA_NOTA(atuais[1], LED_PIOY,LED_PIN_MASKY);
+				TOCA_NOTA(atuais[2], LED_PIOR,LED_PIN_MASKR);
+				TOCA_NOTA(atuais[3], LED_PIOG,LED_PIN_MASKG);
+				TOCA_NOTA(atuais[4], LED_PIOW,LED_PIN_MASKW);
+				TOCA_NOTA(atuais[5], LED_PIOLA,LED_PIN_MASKLA);
+				TOCA_NOTA(atuais[6], LED_PIOSI,LED_PIN_MASKSI);
+				TOCA_NOTA(atuais[7], LED_PIODO2,LED_PIN_MASKDO2);
+				
+			}
+			
+		}
+		vTaskDelay(300);
+	}
+}
 
 /* 
  * Check whether "cp" is a valid ascii representation
@@ -477,6 +562,7 @@ uint read_sdcard(char music_name[]){
 			if(j>=LINE_SIZE-1){
 				i++;
 				j=0;
+				N++;
 			}
 			else{				
 				j++;
@@ -528,6 +614,7 @@ int main(void)
 
 	sdQueue = xQueueCreate( 1, sizeof( char ) * CHAR_SIZE );
 	xSemaphoreMusic = xSemaphoreCreateBinary();
+	xQueueMus = xQueueCreate( 50, sizeof( int )*24 );
   
 	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
@@ -537,6 +624,16 @@ int main(void)
 	if (xTaskCreate(task_sdcard, "sd", TASK_WIFI_STACK_SIZE, NULL,
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create Wifi task\r\n");
+	}
+	
+	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
+	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create test TASK TOCA task\r\n");
+	}	
+	
+	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
+	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create test MAESTRO task\r\n");
 	}
 
 
