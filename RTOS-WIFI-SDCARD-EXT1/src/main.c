@@ -52,14 +52,22 @@ extern void vApplicationTickHook(void);
 extern void vApplicationMallocFailedHook(void);
 extern void xPortSysTickHandler(void);
 
-#define CHAR_SIZE 100
+#define CHAR_SIZE 255
 #define LINE_SIZE 21
 #define MAX_NOTES 100
+#define MAX_MUSIC 30
 int music_matrix[MAX_NOTES][LINE_SIZE];
 QueueHandle_t sdQueue;
 SemaphoreHandle_t xSemaphoreMusic;
 QueueHandle_t xQueueMus;
 int N = 0;
+
+int first_req_done = 0;
+
+int QuantidadeMusica = 0;
+uint musicaAtual = 0;
+char musicastxt[MAX_MUSIC][CHAR_SIZE];
+
 
 #define TASK_MONITOR_STACK_SIZE            (2048/sizeof(portSTACK_TYPE))
 #define TASK_MONITOR_STACK_PRIORITY        (tskIDLE_PRIORITY)
@@ -302,18 +310,26 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 		switch (u8Msg) {
 		case SOCKET_MSG_CONNECT:
 		{
-      printf("socket_msg_connect\n"); 
+			printf("socket_msg_connect\n"); 
 			if (gbTcpConnection) {
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
-				sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				if(!first_req_done){
+					sprintf((char *)gau8ReceivedBuffer, "%s", "GET /deleteAll HTTP/1.1\r\nhost: embarcados-backend.herokuapp.com\r\nAccept: */*\r\n\r\n");
+				}
+				else{
+					sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				}
 
 				tstrSocketConnectMsg *pstrConnect = (tstrSocketConnectMsg *)pvMsg;
 				if (pstrConnect && pstrConnect->s8Error >= SOCK_ERR_NO_ERROR) {
-          printf("send \n");
+					printf("send \n");
 					send(tcp_client_socket, gau8ReceivedBuffer, strlen((char *)gau8ReceivedBuffer), 0);
 
-					memset(gau8ReceivedBuffer, 0, MAIN_WIFI_M2M_BUFFER_SIZE);
-					recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
+					if(first_req_done){
+						memset(gau8ReceivedBuffer, 0, MAIN_WIFI_M2M_BUFFER_SIZE);
+						recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);	
+					}					
+					first_req_done = 1;
 				} else {
 					printf("socket_cb: connect error!\r\n");
 					gbTcpConnection = false;
@@ -323,8 +339,6 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 			}
 		}
 		break;
-    
-
 
 		case SOCKET_MSG_RECV:
 		{
@@ -337,9 +351,7 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 				
 				if(result != NULL){
 					char music_server[CHAR_SIZE];
-					char music_name[CHAR_SIZE];
 					memset(music_server,0,CHAR_SIZE);
-					memset(music_name,0,CHAR_SIZE);
 				
 					int i = 0;
 					result += 10;
@@ -348,17 +360,33 @@ static void socket_cb(SOCKET sock, uint8_t u8Msg, void *pvMsg)
 						i++;
 						result++;
 					}
-					sprintf(music_name,"0:%s",music_server);
-					
-					xQueueSend( sdQueue, &music_name, NULL);
+					printf("NAME BEFORE: %s\r\n",music_server);
+					xQueueSend( sdQueue, &music_server, NULL);
 				}
+//  				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
+//  				recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
+			} else {
+				printf("socket_cb: recv error!\r\n");
+  				close(tcp_client_socket);
+  				tcp_client_socket = -1;
+			}
+		}
+		break;
+
+		case SOCKET_MSG_SEND:
+		{
+			memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
+			if(QuantidadeMusica>0){
+				QuantidadeMusica--;
+				sprintf((char *)gau8ReceivedBuffer, "GET /new/%s HTTP/1.1\r\nhost: embarcados-backend.herokuapp.com\r\nAccept: */*\r\n\r\n", musicastxt[QuantidadeMusica]);
+				send(tcp_client_socket, gau8ReceivedBuffer, strlen((char *)gau8ReceivedBuffer), 0);
+			}
+			else{
+				sprintf((char *)gau8ReceivedBuffer, "%s", MAIN_PREFIX_BUFFER);
+				send(tcp_client_socket, gau8ReceivedBuffer, strlen((char *)gau8ReceivedBuffer), 0);
 				
 				memset(gau8ReceivedBuffer, 0, sizeof(gau8ReceivedBuffer));
 				recv(tcp_client_socket, &gau8ReceivedBuffer[0], MAIN_WIFI_M2M_BUFFER_SIZE, 0);
-			} else {
-				printf("socket_cb: recv error!\r\n");
-				close(tcp_client_socket);
-				tcp_client_socket = -1;
 			}
 		}
 		break;
@@ -512,12 +540,70 @@ static void task_wifi(void *pvParameters) {
 	  }
 }
 
+
+uint read_musics_name(void){
+	Ctrl_status status;
+	FRESULT res;
+	FATFS fs;
+	FIL file_object;
+    static FILINFO fno;
+    DIR dir;
+	
+    /* Wait card present and ready */
+    do {
+      status = sd_mmc_test_unit_ready(0);
+      if (CTRL_FAIL == status) {
+        printf("Card install FAIL\n\r");
+        printf("Please unplug and re-plug the card.\n\r");
+        while (CTRL_NO_PRESENT != sd_mmc_check(0)) {
+          vTaskDelay(100);
+        }
+      }
+      vTaskDelay(100);
+    } while (CTRL_GOOD != status);
+
+    printf("Mount disk (f_mount)...\r\n");
+    memset(&fs, 0, sizeof(FATFS));
+    res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
+    if (FR_INVALID_DRIVE == res) {
+      printf("[FAIL MOUNT] res %d\r\n", res);
+      return 1;
+    }
+	
+	// zera vetor
+	memset(musicastxt, 0, sizeof(musicastxt));
+	 QuantidadeMusica= 0;
+	
+	// busca por nome de arquivos
+	 res = f_opendir(&dir,  "/");                       /* Open the directory */
+	 if (res == FR_OK) {
+		 for(;;){
+			res = f_readdir(&dir, &fno);                   /* Read a directory item */
+		    if (res != FR_OK || fno.fname[0] == 0) break;  /* Break on error or end of dir */
+			if (strstr(fno.fname, ".txt")){
+				sprintf(musicastxt[QuantidadeMusica], "%s", fno.fname);
+				QuantidadeMusica++;
+			}
+		 }
+	 }
+		
+	return QuantidadeMusica;
+}
+
 uint read_sdcard(char music_name[]){
 	Ctrl_status status;
 	FRESULT res;
 	FATFS fs;
 	FIL file_object;
-  
+     static FILINFO fno;
+    DIR dir;
+
+	UINT bytes_to_read=sizeof(char)*1;
+	char infos[bytes_to_read];
+	UINT bytes_read=0;
+	int i=0;
+	int j=0;
+
     printf("Please plug an SD, MMC or SDIO card in slot.\n\r");
 	
     /* Wait card present and ready */
@@ -537,27 +623,22 @@ uint read_sdcard(char music_name[]){
     memset(&fs, 0, sizeof(FATFS));
     res = f_mount(LUN_ID_SD_MMC_0_MEM, &fs);
     if (FR_INVALID_DRIVE == res) {
-      printf("[FAIL] res %d\r\n", res);
+      printf("[FAIL MOUNT] res %d\r\n", res);
       return 1;
     }
-
+	 
     music_name[0] = LUN_ID_SD_MMC_0_MEM + '0';
     res = f_open(&file_object,	(char const *)music_name,	FA_READ);
     if (res != FR_OK) {
-      printf("[FAIL] res %d\r\n", res);
+      printf("[FAIL OPEN] res %d\r\n", res);
       return 1;
     }
-	
-	UINT bytes_to_read=sizeof(char)*1;
-	char infos[bytes_to_read];
-	UINT bytes_read=0;
-	int i=0;
-	int j=0;
 	
 	do {
 		f_read(&file_object,&infos,bytes_to_read,&bytes_read);
 		if (strcmp(infos,'1') || strcmp(infos,'0')){
 			music_matrix[i][j] = atoi(infos);
+			//printf("%s",infos);
 			if(j>=LINE_SIZE-1){
 				i++;
 				j=0;
@@ -579,13 +660,18 @@ static void task_sdcard(void *pvParameters){
      printf("\x0C\n\r-- SD/MMC/SDIO Card Example on FatFs --\n\r");
      printf("-- Compiled: %s %s --\n\r", __DATE__, __TIME__);
      
-     sd_mmc_init();
+    sd_mmc_init();
 
 	char music_name[CHAR_SIZE];
-         
+	char music_server[CHAR_SIZE];
+    read_musics_name();
+	
 	while(1){
 		if (xQueueReceive( sdQueue, &music_name, ( TickType_t )  10 / portTICK_PERIOD_MS )){	
-			read_sdcard(music_name);
+			sprintf(music_server,"0:%s",music_name);
+			printf("NAME AFTER: %s\r\n",music_server);
+			read_sdcard(music_server);
+			printf("DONE READING\r\n");
 			xSemaphoreGive(xSemaphoreMusic);
 		}
 		vTaskDelay(1000);
@@ -615,25 +701,25 @@ int main(void)
 	xSemaphoreMusic = xSemaphoreCreateBinary();
 	xQueueMus = xQueueCreate( 50, sizeof( int )*24 );
   
-	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
-	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create Wifi task\r\n");
-	}
+ 	if (xTaskCreate(task_wifi, "Wifi", TASK_WIFI_STACK_SIZE, NULL,
+ 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
+ 		printf("Failed to create Wifi task\r\n");
+ 	}
 
 	if (xTaskCreate(task_sdcard, "sd", TASK_WIFI_STACK_SIZE, NULL,
 	TASK_WIFI_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create Wifi task\r\n");
 	}
 	
-	/*if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
-	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create test TASK TOCA task\r\n");
-	}	
-	
-	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
-	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create test MAESTRO task\r\n");
-	}*/
+// 	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
+// 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+// 		printf("Failed to create test TASK TOCA task\r\n");
+// 	}	
+// 	
+// 	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
+// 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+// 		printf("Failed to create test MAESTRO task\r\n");
+// 	}
 
 
 	vTaskStartScheduler();
