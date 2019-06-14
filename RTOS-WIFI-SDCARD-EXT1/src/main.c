@@ -711,15 +711,15 @@ int main(void)
 		printf("Failed to create Wifi task\r\n");
 	}
 	
-// 	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
-// 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
-// 		printf("Failed to create test TASK TOCA task\r\n");
-// 	}	
-// 	
-// 	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
-// 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
-// 		printf("Failed to create test MAESTRO task\r\n");
-// 	}
+	if (xTaskCreate(task_led, "TOCA", TASK_LED_STACK_SIZE, NULL,
+ 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+ 		printf("Failed to create test TASK TOCA task\r\n");
+ 	}	
+ 	
+ 	if (xTaskCreate(task_maestro, "maestro", TASK_LED_STACK_SIZE, NULL,
+ 	TASK_LED_STACK_PRIORITY, NULL) != pdPASS) {
+ 		printf("Failed to create test MAESTRO task\r\n");
+ 	}
 
 
 	vTaskStartScheduler();

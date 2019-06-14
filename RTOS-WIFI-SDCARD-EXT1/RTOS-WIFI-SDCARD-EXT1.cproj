@@ -1218,6 +1218,9 @@
     <None Include="src\config\conf_fatfs.h">
       <SubType>compile</SubType>
     </None>
+    <Compile Include="src\leds.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\main.h">
       <SubType>compile</SubType>
     </Compile>

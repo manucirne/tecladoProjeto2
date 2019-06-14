@@ -52,11 +52,6 @@ extern "C" {
 #define MAIN_WLAN_AUTH                    M2M_WIFI_SEC_OPEN /**< Security manner */
 #define MAIN_WLAN_PSK                     "" /**< Password for Destination SSID */
 
-/** Wi-Fi Settings */
-// #define MAIN_WLAN_SSID                    "" /**< Destination SSID */
-// #define MAIN_WLAN_AUTH                    M2M_WIFI_SEC_WPA_PSK /**< Security manner */
-// #define MAIN_WLAN_PSK                     "" /**< Password for Destination SSID */
-
 #define MAIN_MAC_ADDRESS {0x42, 0x00, 0x61, 0x13, 0xF9, 0x74}
 static uint8_t gau8MacAddr[] = MAIN_MAC_ADDRESS;
 
